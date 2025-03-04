@@ -16,8 +16,40 @@ document.addEventListener("DOMContentLoaded", function () {
         for (let col = 0; col < 45; col++) {
             let td = document.createElement("td");
             let img = document.createElement("img");
-            img.src = "assets/t0.bmp";
-            img.classList.add("field-cell");
+            if (row === 0){
+                if (col === 0){
+                    img.src = "assets/side_tl.bmp";
+                    img.classList.add("side");
+                } else if (col === 26){
+                    img.src = "assets/side_tr.bmp";
+                    img.classList.add("side");
+                } else {
+                    img.src = "assets/side_t.bmp";
+                    img.classList.add("side");
+                }
+            } else if (row === 26){
+                if (col === 0){
+                    img.src = "assets/side_bl.bmp";
+                    img.classList.add("side");
+                } else if (col === 26){
+                    img.src = "assets/side_br.bmp";
+                    img.classList.add("side");
+                } else {
+                    img.src = "assets/side_b.bmp";
+                    img.classList.add("side");
+                }
+            } else {
+                if (col === 0){
+                    img.src = "assets/side_l.bmp";
+                    img.classList.add("side");
+                } else if (col === 26){
+                    img.src = "assets/side_r.bmp";
+                    img.classList.add("side");
+                } else {
+                    img.src = "assets/t0.bmp";
+                    img.classList.add("field-cell");
+                }
+            }
             td.appendChild(img);
             tr.appendChild(td);
         }
