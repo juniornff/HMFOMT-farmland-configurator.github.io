@@ -16,7 +16,7 @@ document.addEventListener("DOMContentLoaded", function () {
         for (let col = 0; col < 45; col++) {
             let td = document.createElement("td");
             let img = document.createElement("img");
-            img.src = "t0.bmp";
+            img.src = "assets/t0.bmp";
             img.classList.add("field-cell");
             td.appendChild(img);
             tr.appendChild(td);
