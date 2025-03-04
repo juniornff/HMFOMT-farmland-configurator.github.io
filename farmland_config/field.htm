@@ -1,0 +1,1964 @@
+<HTML>
+<HEAD>
+<style>
+IMG {
+	cursor:hand;
+}
+
+.side {
+}
+
+.grid td {
+	border:solid 1px black;
+}
+
+.grid td.hilite {
+	border:solid 1px red;
+}
+
+.nogrid td {
+	border:solid 0px black;
+}
+
+.label {
+	font-family:Microsoft Sans Serif, Verdana, Arial, Sans Serif;
+	font-size:9pt;
+}
+</style>
+<script>
+var m_sCurrSrc = '';
+var m_sCurrImg = 't0.bmp';
+var m_sPrevImg = '';
+
+var m_bDrawMode   = false;
+var m_bSampleMode = false;
+var m_bPenMode    = true;
+
+//27 cells down = 0 - 26: => 1 & 25
+var ROW_MIN = 0;
+var ROW_MAX = 26;
+
+//45 cells across = 0 - 44: 1 & 43
+var COL_MIN = 0;
+var COL_MAX = 44;
+
+function mouse_over() {
+	var e = event.srcElement;
+
+	var cidx = e.parentElement.cellIndex;
+	var ridx = e.parentElement.parentElement.rowIndex;
+	var sMsg = '';
+	if (e.tagName == "IMG") {
+		if (e.className != 'side') {
+
+			if (m_bDrawMode) {
+				m_sCurrSrc = e.src;
+				e.src = m_sCurrImg;
+				e.parentElement.flg = m_sCurrFlg;
+			}
+
+			sMsg = 'ROW ' + ridx;
+			sMsg += ' (' + (ROW_MAX - ridx) + ' from bottom)';
+			sMsg +=  '; COL ' + cidx;
+			sMsg += ' (' + (COL_MAX - cidx) + ' from right)';
+
+		}
+		else {
+			sMsg = '[ROW ' + ridx + ';COL ' + cidx + '] (out of bounds)';
+		}
+
+		window.status = sMsg;
+	}
+}
+
+function mouse_out() {
+	var e = event.srcElement;
+
+	if (e.tagName == "IMG") {
+		if (e.className != 'side') {
+			if (m_bDrawMode) {
+					e.src = m_sCurrImg
+			}
+		}
+	}
+}
+
+function ToolOn() {
+	var e = event.srcElement;
+
+	switch(m_iCurrTool) {
+	case TL_PEN:				//click to put one square
+		clickSquare(e);
+		break;
+	case TL_PAINT:			//click to toggle draw mode
+		toggleDraw()
+		break;
+	case TL_FILL:				//will stop at fences/stones/branches
+		clickFill(e)
+		break;
+	case TL_DROP:				//click to set the selected square to current
+		sampleSquare(e)
+		break;
+	case TL_BAG:				//click to set 3x3 bag of seeds
+	 	clickBag(e)
+		break;
+	}
+}
+
+function toggleDraw() {
+	if (m_bDrawMode) {	//toggle off
+		m_bDrawMode = false;
+		setToggleMsg()
+	}
+	else {
+		m_bDrawMode = true;
+		setToggleMsg()
+	}
+}
+
+function clickSquare(obj) {
+	//current tool is pen
+	if (m_bDrawMode) {	//toggle off
+		m_bDrawMode = false;
+		setToggleMsg()
+	}
+
+	//paint current square only
+	if (obj.tagName == "IMG") {
+		if (obj.className != 'side') {
+			m_sCurrSrc = obj.src;
+			obj.src = m_sCurrImg
+			obj.parentElement.flg = m_sCurrFlg
+
+		}
+	}
+}
+
+function clickFill(obj) {
+	//current tool is Fill
+	if (m_bDrawMode) {	//toggle off
+		m_bDrawMode = false;
+		setToggleMsg()
+	}
+
+	//fill all
+	if (obj.tagName == "IMG") {
+		if (obj.className != 'side') {
+			var cIdx = obj.parentElement.cellIndex;
+			var rIdx = obj.parentElement.parentElement.rowIndex;
+			cIdx = parseInt(cIdx,10);
+			rIdx = parseInt(rIdx,10);
+
+			fillAll(rIdx,cIdx,m_sCurrImg);
+		}
+	}
+}
+
+function sampleSquare(obj) {
+	if (obj.tagName == "IMG" && obj.className != 'side') {
+		var oSquare = new square();
+		oSquare.setGraphic(obj.src);
+
+		m_sCurrImg 		= oSquare.getGraphic();
+		m_bSampleMode	= false;
+
+		//change tool cursor;
+		if (m_iPrevTool == TL_DROP) {
+			m_iPrevTool = TL_PEN;
+		}
+
+		parent.frames[0].window.setTool(m_iPrevTool)
+
+		//change square type to that sampled
+		parent.frames[0].window.setSquareType(oSquare.gtype);
+
+		var imgSquare = document.getElementById("imgSquare");
+		imgSquare.src = m_sCurrImg;
+		m_sCurrFlg = m_arrImgToFlg[m_sCurrImg];
+	}
+}
+
+function clickBag(obj) {
+	//current tool is bag
+	if (m_bDrawMode) {	//toggle off
+		m_bDrawMode = false;
+		setToggleMsg()
+	}
+
+	//place 3x3 bags
+	if (obj.tagName == "IMG") {
+		if (obj.className != 'side') {
+			m_sCurrSrc = obj.src;
+			m_sCurrImg = 'sd0.bmp';
+			//obj.src = m_sCurrImg
+
+			if (!m_tblField) m_tblField = document.getElementById("tblField");
+
+			var cell = obj.parentElement;
+			var rIdx = cell.parentElement.rowIndex;
+			var cIdx = cell.cellIndex;
+
+			var ulCell,uCell,urCell;
+			var lCell,cCell,rCell;
+			var dlCell,dCell,drCell;
+			var tmpSrc;
+
+			if (rIdx > ROW_MIN && cIdx > COL_MIN) {
+				ulCell = m_tblField.rows[rIdx-1].cells[cIdx-1].childNodes[0];
+
+				if(canFill(rIdx-1,cIdx-1)) {
+					ulCell.src = m_sCurrImg;
+					ulCell.flg = SQ_SEEDED;
+				}
+			}
+
+			if (rIdx > ROW_MIN) {
+				uCell  = m_tblField.rows[rIdx-1].cells[cIdx].childNodes[0];
+
+				if(canFill(rIdx-1,cIdx)) {
+					uCell.src = m_sCurrImg;
+					uCell.flg = SQ_SEEDED;
+				}
+			}
+
+			if (rIdx > ROW_MIN && cIdx < COL_MAX) {
+				urCell = m_tblField.rows[rIdx-1].cells[cIdx+1].childNodes[0];
+
+				if(canFill(rIdx-1,cIdx+1)) {
+					urCell.src = m_sCurrImg;
+					urCell.flg = SQ_SEEDED;
+				}
+			}
+
+			if (rIdx > (ROW_MIN-1) && cIdx > COL_MIN) {
+				lCell  = m_tblField.rows[rIdx].cells[cIdx-1].childNodes[0];
+
+				if(canFill(rIdx,cIdx-1)) {
+					lCell.src = m_sCurrImg;
+					lCell.flg = SQ_SEEDED;
+				}
+			}
+
+			if (rIdx > ROW_MIN && cIdx > COL_MIN) {
+				cCell  = m_tblField.rows[rIdx].cells[cIdx].childNodes[0];
+
+				if(canFill(rIdx,cIdx)) {
+					cCell.src = m_sCurrImg;
+					cCell.flg = SQ_SEEDED;
+				}
+			}
+
+			if (rIdx > (ROW_MIN-1) && cIdx < COL_MAX) {
+				rCell  = m_tblField.rows[rIdx].cells[cIdx+1].childNodes[0];
+
+				if(canFill(rIdx,cIdx+1)) {
+					rCell.src = m_sCurrImg;
+					rCell.flg = SQ_SEEDED;
+				}
+			}
+
+			if (rIdx < ROW_MAX && cIdx > COL_MIN) {
+				dlCell = m_tblField.rows[rIdx+1].cells[cIdx-1].childNodes[0];
+
+				if(canFill(rIdx+1,cIdx-1)) {
+					dlCell.src = m_sCurrImg;
+					dlCell.flg = SQ_SEEDED;
+				}
+			}
+
+			if (rIdx < ROW_MAX && cIdx > (COL_MIN - 1)) {
+				dCell  = m_tblField.rows[rIdx+1].cells[cIdx].childNodes[0];
+
+				if(canFill(rIdx+1,cIdx)) {
+					dCell.src = m_sCurrImg;
+					dCell.flg = SQ_SEEDED;
+				}
+			}
+
+			if (rIdx < ROW_MAX && cIdx < COL_MAX) {
+				drCell = m_tblField.rows[rIdx+1].cells[cIdx+1].childNodes[0];
+
+				if(canFill(rIdx+1,cIdx+1)) {
+					drCell.src = m_sCurrImg;
+					drCell.flg = SQ_SEEDED;
+				}
+
+			}
+
+		//*** done
+
+		}
+	}
+}
+
+
+function showGrid() {
+	var tblField = document.getElementById("tblField");
+
+	tblField.className = "grid"
+}
+
+function hideGrid() {
+	var tblField = document.getElementById("tblField");
+
+	tblField.className = "nogrid"
+}
+
+function toggleGrid(obj) {
+	if (obj.checked == true) {
+		showGrid()
+	}
+	else {
+		hideGrid()
+	}
+}
+
+var m_bFenceShown = true;
+
+function toggleFence(obj) {
+	if (m_bFenceShown) {
+		hideFence(obj)
+		m_bFenceShown = false;
+	}
+	else {
+		showFence(obj)
+		m_bFenceShown = true;
+	}
+}
+
+function hideFence(obj) {
+	var tblField = document.getElementById("tblField");
+	var spnFence = document.getElementById("spnFence");
+
+	var i;
+
+	//top row
+	for (i=1; i<tblField.rows[1].cells.length-1; i++) {
+		tblField.rows[1].cells[i].childNodes[0].src = 't0.bmp';
+		tblField.rows[25].cells[i].childNodes[0].src = 't0.bmp';
+	}
+
+	var j;
+
+	for (j=1; j<26; j++) {
+		tblField.rows[j].cells[1].childNodes[0].src = 't0.bmp';
+		tblField.rows[j].cells[43].childNodes[0].src = 't0.bmp';
+	}
+}
+
+
+function showFence(obj) {
+	var tblField = document.getElementById("tblField");
+	var spnFence = document.getElementById("spnFence");
+
+	var i;
+
+	//top row
+	for (i=1; i<tblField.rows[1].cells.length-1; i++) {
+		tblField.rows[1].cells[i].childNodes[0].src = 'log.bmp';
+		tblField.rows[25].cells[i].childNodes[0].src = 'log.bmp';
+	}
+
+	var j;
+
+	for (j=2; j<26; j++) {
+		tblField.rows[j].cells[1].childNodes[0].src = 'log.bmp';
+		tblField.rows[j].cells[43].childNodes[0].src = 'log.bmp';
+	}
+}
+</script>
+<script src="square.js"></script>
+<script>
+var m_sCurrFlg;
+function setCurr() {
+	var iCurrType = parent.frames[0].window.m_iCurrType;
+	m_sCurrImg = '';
+
+	var oSquare = new square();
+	oSquare.gtype = iCurrType;
+	m_sCurrImg = oSquare.getGraphic();
+
+	var imgSquare = document.getElementById("imgSquare");
+	imgSquare.src = m_sCurrImg;
+	m_sCurrFlg = m_arrImgToFlg[m_sCurrImg];
+}
+
+var m_iPrevTool = 0;
+var m_iCurrTool = 0;
+
+var TL_PEN 		= 0;
+var TL_PAINT 	= 1;
+var TL_FILL 	= 2;
+var TL_DROP 	= 3;
+var TL_BAG    = 4;
+
+function setCurrTool() {
+	m_iPrevTool = m_iCurrTool;
+	m_iCurrTool = parent.frames[0].window.m_iCurrTool;
+
+	switch (m_iCurrTool) {
+		case TL_PEN:
+			m_bSampleMode = false;
+			m_bDrawMode   = false;
+			setToggleMsg()
+
+			m_bPenMode    = true;
+			break;
+		case TL_PAINT:
+			m_bSampleMode = false;
+			m_bDrawMode   = false;	//draw mode only true when you toggle
+			setToggleMsg()
+
+			m_bPenMode    = false;
+			break;
+		case TL_FILL:
+			m_bSampleMode = false;
+			m_bDrawMode   = false;
+			setToggleMsg()
+
+			m_bPenMode    = false;
+			break;
+		case TL_DROP:
+			m_bSampleMode = true;
+			m_bDrawMode   = false;
+			setToggleMsg()
+
+			m_bPenMode    = true;
+			break;
+		case TL_BAG:
+			m_bSampleMode = false;
+			m_bDrawMode   = false;
+			setToggleMsg()
+
+			m_bPenMode    = true;
+			break;
+	}
+
+	setCurs(m_iCurrTool);
+}
+
+var m_tblField;
+
+//FLAG CONSTANTS
+var SQ_EMPTY = 0;
+var SQ_PLOWED = 1;
+var SQ_SEEDED = 2;
+var SQ_LUMBER = 3;
+var SQ_BRANCH = 4;
+var SQ_STONE = 5;
+var SQ_GRASS = 6;
+var SQ_GREDGE = 7;
+
+function canFill(r,c) {
+	if (!m_tblField) m_tblField = document.getElementById("tblField");
+
+	var oTD;
+
+	if (r > 0 && c > 0 && r < ROW_MAX && c < COL_MAX) {
+		oTD = m_tblField.rows[r].cells[c];
+	}
+	else return false;
+
+	if (!oTD.flg) return false;
+
+	var iFlag = parseInt(oTD.flg,10);
+
+	if (isNaN(iFlag)) return false;
+
+	return (iFlag == SQ_EMPTY || iFlag == SQ_PLOWED || iFlag == SQ_SEEDED || iFlag == SQ_GRASS || iFlag == SQ_GREDGE)
+}
+
+//*** NEW FILL ALGORITHM
+function fillAll(r,c,sImg) {
+	var bLftFnd  = false;
+	var bRtFnd   = false;
+	var bTopFnd  = false
+	var bBotFnd  = false;
+
+	var bTLFnd = false;
+	var bTRFnd = false;
+	var bBLFnd = false;
+	var bBRFnd = false;
+
+	var rSt  = r;
+	var rEnd = r;
+	var cSt  = c;
+	var cEnd = c;
+
+	//******** LEFT/RIGHT SCAN ************
+	while ((!bLftFnd && cSt > COL_MIN) || (!bRtFnd && cEnd < COL_MAX)) {
+		rSt = r;
+		rEnd = r;
+		bTLFnd = false;
+		bTRFnd = false;
+		bBLFnd = false;
+		bBRFnd = false;
+
+		if (cSt == cEnd) {
+			//need to fill up & down rows too
+
+			//******** UP/DOWN SCAN ************
+			while ((!bTopFnd && rSt > ROW_MIN) || (!bBotFnd && rEnd < ROW_MAX)) {
+				if (!bTopFnd) {
+					if (!canFill(rSt,cSt)) {
+						bTopFnd = true;
+					}
+					else {
+						fillSq(rSt,cSt,sImg)
+					}
+				}
+
+				if (!bTopFnd) rSt--;
+
+				if (!bBotFnd) {
+					if (!canFill(rEnd,cEnd)) {
+						bBotFnd = true;
+					}
+					else {
+						fillSq(rEnd,cEnd,sImg)
+					}
+				}
+
+				if (!bBotFnd) rEnd++;
+			}
+		}
+		else {
+			//******** UP/DOWN SCAN ************
+			while ((!(bTLFnd && bTRFnd) && rSt > ROW_MIN) || (!(bBLFnd && bBRFnd) && rEnd < ROW_MAX)) {
+				if (!bTLFnd) {
+					if (!canFill(rSt,cSt)) {
+						bTLFnd = true;
+					}
+					else {
+						fillSq(rSt,cSt,sImg)
+					}
+				}
+
+				if (!bTRFnd) {
+					if (!canFill(rSt,cEnd)) {
+						bTRFnd = true;
+					}
+					else {
+						fillSq(rSt,cEnd,sImg)
+					}
+				}
+
+				if (!bTLFnd || !bTRFnd) rSt--;
+
+				if (rSt == ROW_MIN) {
+						bTLFnd = true;
+						bTRFnd = true;
+				}
+
+				if (!bBLFnd) {
+					if (!canFill(rEnd,cSt)) {
+						bBLFnd = true;
+					}
+					else {
+						fillSq(rEnd,cSt,sImg)
+					}
+				}
+
+				if (!bBRFnd) {
+					if (!canFill(rEnd,cEnd)) {
+						bBRFnd = true;
+					}
+					else {
+						fillSq(rEnd,cEnd,sImg)
+					}
+				}
+
+				if (!bBLFnd || !bBRFnd) rEnd++;
+
+				if (rEnd == ROW_MAX) {
+						bBLFnd = true;
+						bBRFnd = true;
+				}
+
+			}
+		}
+
+		//((!bLftFnd && cSt > COL_MIN) || (!bRtFnd && cEnd < COL_MAX))
+
+		//increment col start and end pointers
+		if (cSt > COL_MIN && canFill(r,cSt)) cSt--;
+		else bLftFnd = true;
+
+		if (cEnd < COL_MAX && canFill(r,cEnd)) cEnd++;
+		else bRtFnd = true;
+
+		if (cSt == COL_MIN) {
+			bLftFnd = true;
+		}
+
+		if (cEnd == COL_MAX) {
+			bRtFnd = true;
+		}
+	}
+}
+
+var m_arrImgToFlg = new Array()
+
+m_arrImgToFlg["t0.bmp"]   = SQ_EMPTY;
+m_arrImgToFlg["t1.bmp"] 	= SQ_PLOWED;
+m_arrImgToFlg["sd0.bmp"]	= SQ_SEEDED;
+m_arrImgToFlg["log.bmp"]  = SQ_LUMBER;
+m_arrImgToFlg["log2.bmp"] = SQ_BRANCH;
+m_arrImgToFlg["rock.gif"]	= SQ_STONE;
+m_arrImgToFlg["grs.bmp"]  = SQ_GRASS
+m_arrImgToFlg["grs2.bmp"] = SQ_GREDGE
+
+function fillSq(r,c,sImg) {
+	if (!m_tblField) m_tblField = document.getElementById("tblField");
+
+	m_tblField.rows[r].cells[c].childNodes[0].src = sImg;
+	m_tblField.rows[r].cells[c].flg = m_arrImgToFlg[sImg];
+}
+
+</script>
+<script>
+//this is the cursor code
+var m_imgCursor;
+
+var arrToolImgs = new Array();
+
+arrToolImgs[TL_PEN]   = 't_pen.gif';
+arrToolImgs[TL_PAINT] = 't_paint.gif';
+arrToolImgs[TL_FILL]  = 't_fill.gif';
+arrToolImgs[TL_DROP]  = 't_drop.gif';
+arrToolImgs[TL_BAG]   = 't_bag.gif';
+
+function setCurs(iToolId) {
+	if (!m_imgCursor) m_imgCursor = document.getElementById("imgCursor");
+
+	m_imgCursor.src = arrToolImgs[iToolId];
+}
+</script>
+</HEAD>
+<BODY>
+<!-- ROWS 0-26 = 27 rows
+	usable rows 1-26
+-->
+<table class="grid" id="tblField" cellpadding="0" cellspacing="0" border="1" style="border-collapse:collapse;" onmouseover="mouse_over()" onmouseout="mouse_out()" onclick="ToolOn()">
+<!-- ** ROW 0  - start row ** -->
+<tr>
+<td><img class="side" src="side_tl.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_t.bmp"></td>
+<td><img class="side" src="side_tr.bmp"></td>
+</tr>
+<!-- ** ROW 1 ** -->
+<tr>
+<td><img class="side" src="side_l.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td><img class="side" src="side_r.bmp"></td>
+</tr>
+<!-- ** ROW 2 ** -->
+<tr>
+<td><img class="side" src="side_l.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td><img class="side" src="side_r.bmp"></td>
+</tr>
+<!-- ** ROW 3 ** -->
+<tr>
+<td><img class="side" src="side_l.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td><img class="side" src="side_r.bmp"></td>
+</tr>
+<!-- ** ROW 4 ** -->
+<tr>
+<td><img class="side" src="side_l.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td><img class="side" src="side_r.bmp"></td>
+</tr>
+<!-- ** ROW 5 ** -->
+<tr>
+<td><img class="side" src="side_l.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td><img class="side" src="side_r.bmp"></td>
+</tr>
+<!-- ** ROW 6 ** -->
+<tr>
+<td><img class="side" src="side_l.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td><img class="side" src="side_r.bmp"></td>
+</tr>
+<!-- ** ROW 7 ** -->
+<tr>
+<td><img class="side" src="side_l.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td><img class="side" src="side_r.bmp"></td>
+</tr>
+<!-- ** ROW 8 ** -->
+<tr>
+<td><img class="side" src="side_l.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td><img class="side" src="side_r.bmp"></td>
+</tr>
+<!-- ** ROW 9 ** -->
+<tr>
+<td><img class="side" src="side_l.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td><img class="side" src="side_r.bmp"></td>
+</tr>
+<!-- ** ROW 10 ** -->
+<tr>
+<td><img class="side" src="side_l.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td><img class="side" src="side_r.bmp"></td>
+</tr>
+<!-- ** ROW 11 ** -->
+<tr>
+<td><img class="side" src="side_l.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td><img class="side" src="side_r.bmp"></td>
+</tr>
+<!-- ** ROW 12 ** -->
+<tr>
+<td><img class="side" src="side_l.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td><img class="side" src="side_r.bmp"></td>
+</tr>
+<!-- ** ROW 13 ** -->
+<tr>
+<td><img class="side" src="side_l.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td><img class="side" src="side_r.bmp"></td>
+</tr>
+<!-- ** ROW 14 ** -->
+<tr>
+<td><img class="side" src="side_l.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td><img class="side" src="side_r.bmp"></td>
+</tr>
+<!-- ** ROW 15 ** -->
+<tr>
+<td><img class="side" src="side_l.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td><img class="side" src="side_r.bmp"></td>
+</tr>
+<!-- ** ROW 16 ** -->
+<tr>
+<td><img class="side" src="side_l.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td><img class="side" src="side_r.bmp"></td>
+</tr>
+<!-- ** ROW 17 ** -->
+<tr>
+<td><img class="side" src="side_l.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td><img class="side" src="side_r.bmp"></td>
+</tr>
+<!-- ** ROW 18 ** -->
+<tr>
+<td><img class="side" src="side_l.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td><img class="side" src="side_r.bmp"></td>
+</tr>
+<!-- ** ROW 19 ** -->
+<tr>
+<td><img class="side" src="side_l.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td><img class="side" src="side_r.bmp"></td>
+</tr>
+<!-- ** ROW 20 ** -->
+<tr>
+<td><img class="side" src="side_l.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td><img class="side" src="side_r.bmp"></td>
+</tr>
+<!-- ** ROW 21 ** -->
+<tr>
+<td><img class="side" src="side_l.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td><img class="side" src="side_r.bmp"></td>
+</tr>
+<!-- ** ROW 22 ** -->
+<tr>
+<td><img class="side" src="side_l.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td><img class="side" src="side_r.bmp"></td>
+</tr>
+<!-- ** ROW 23 ** -->
+<tr>
+<td><img class="side" src="side_l.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td><img class="side" src="side_r.bmp"></td>
+</tr>
+<!-- ** ROW 24 ** -->
+<tr>
+<td><img class="side" src="side_l.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="0"><img src="t0.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td><img class="side" src="side_r.bmp"></td>
+</tr>
+<!-- ** ROW 25 ** -->
+<tr>
+<td><img class="side" src="side_l.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td flg="3"><img src="log.bmp"></td>
+<td><img class="side" src="side_r.bmp"></td>
+</tr>
+<!-- ** ROW 26 -- end row ** -->
+<tr>
+<td><img class="side" src="side_bl.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_b.bmp"></td>
+<td><img class="side" src="side_br.bmp"></td>
+</tr>
+</table>
+<table>
+<tr><td class="label">Tool Mode:</td><td id="tdToggle" class="label">&nbsp;</td></tr>
+<tr><td class="label">Current Square:</td><td flg="0"><IMG id="imgSquare" src="t0.bmp"/></td></tr>
+<tr><td class="label">Current Tool:</td><td flg="0"><IMG id="imgCursor" src="t_pen.gif"/></td></tr>
+<tr><td class="label">Show Grid:</td><td flg="0"><INPUT type="checkbox" id="chkGrid" onclick="toggleGrid(this)" checked="true"/></td></tr>
+<tr><td class="label">Perimeter Fence:</td><td flg="0"><INPUT type="checkbox" id="chkFence" onclick="toggleFence(this)" checked="true"/></td></tr>
+</table>
+<SCRIPT>
+function setToggleMsg() {
+	var tdToggle = document.getElementById("tdToggle");
+
+	if (m_bDrawMode) {
+		tdToggle.innerHTML = "<B>[ACTIVE]</B>"
+	}
+	else {
+		tdToggle.innerHTML = "&nbsp;"
+	}
+}
+
+</SCRIPT>
+</BODY>
+</HTML>
+<!--
+field = 43 x 25 squares
+-->

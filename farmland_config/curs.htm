@@ -1,0 +1,69 @@
+<HTML>
+<HEAD>
+<SCRIPT>
+var m_imgCursor;
+var m_iCurrTool = 0;
+
+var TL_PEN 		= 0;
+var TL_PAINT 	= 1;
+var TL_FILL 	= 2;
+var TL_DROP 	= 3;
+var TL_BAG    = 4;
+
+var arrToolImgs = new Array();
+arrToolImgs[TL_PEN]   = 't_pen.gif';
+arrToolImgs[TL_PAINT] = 't_paint.gif';
+arrToolImgs[TL_FILL]  = 't_fill.gif';
+arrToolImgs[TL_DROP]  = 't_drop.gif';
+arrToolImgs[TL_BAG]   = 't_bag.gif';
+
+function setCurs(iToolId) {
+	if (!m_imgCursor) m_imgCursor = document.getElementById("imgCursor");
+
+	m_imgCursor.src = arrToolImgs[iToolId];
+}
+
+function showCurs() {
+	if (!m_imgCursor) m_imgCursor = document.getElementById("imgCursor");
+	m_imgCursor.src = arrToolImgs[m_iCurrTool];
+	m_imgCursor.style.display = 'block';
+}
+
+function hideCurs() {
+	if (!m_imgCursor) m_imgCursor = document.getElementById("imgCursor");
+	m_imgCursor.style.display = 'none';
+}
+
+
+function moveCurs() {
+	if (!m_imgCursor) m_imgCursor = document.getElementById("imgCursor");
+	var eventX = event.x;
+	var eventY = event.y;
+
+	m_imgCursor.style.pixelLeft = eventX + 8;
+	m_imgCursor.style.pixelTop = eventY + 8;
+}
+</SCRIPT>
+</HEAD>
+<BODY>
+<IMG id="imgCursor" src="blank.gif" style="position:absolute;"/>
+<TABLE id="tblGrid" cellpadding="0" cellspacing="0" border="1" width="75%" align="center">
+<tr>
+<td>test</td>
+<td>test</td>
+<td>test</td>
+</tr>
+<tr>
+<td>test</td>
+<td>test</td>
+<td>test</td>
+</tr>
+</TABLE>
+<input type="button" value="go" onclick="m_iCurrTool = 4"/>
+<SCRIPT>
+document.all.tblGrid.onmousemove = moveCurs;
+document.all.tblGrid.onmouseover = showCurs;
+document.all.tblGrid.onmouseout  = hideCurs;
+</SCRIPT>
+</BODY>
+</HTML>

@@ -1,0 +1,157 @@
+<HTML>
+<HEAD>
+<STYLE>
+.ground {
+	height:16px;
+	background-image:URL(t0.bmp);
+}
+
+.hand {
+	cursor:hand;
+}
+</STYLE>
+<SCRIPT>
+var m_iCurrType = 0;
+function mouse_ovr(obj) {
+	var oThisRow = obj.parentElement.parentElement;
+	var oImg     = oThisRow.cells[0].childNodes[0];
+
+	oImg.src 		 = 'hand.gif';
+}
+
+function mouse_out(obj) {
+	var oThisRow = obj.parentElement.parentElement;
+	var oImg     = oThisRow.cells[0].childNodes[0];
+
+	var iCurr = oThisRow.curr;
+
+	if (iCurr == 0) {
+		oImg.src 		 = 'blank.gif';
+	}
+}
+
+function mouse_click(obj) {
+	var oThisRow = obj.parentElement.parentElement;
+	var oImg     = oThisRow.cells[0].childNodes[0];
+
+	var oTbl = oThisRow.parentElement.parentElement;
+	oTbl.rows[m_iCurrType].cells[0].childNodes[0].src = 'blank.gif';
+	oTbl.rows[m_iCurrType].curr = 0;
+
+	m_iCurrType = oThisRow.rowIndex;
+
+	oTbl.rows[m_iCurrType].cells[0].childNodes[0].src = 'hand.gif';
+	oTbl.rows[m_iCurrType].curr = 1;
+
+	parent.frames[1].window.setCurr();
+}
+
+function setSquareType(iSquareType) {
+	//called from the field on sample
+	var tblSquares = document.getElementById("tblSquares");
+
+	tblSquares.rows[m_iCurrType].cells[0].childNodes[0].src = 'blank.gif';
+	tblSquares.rows[m_iCurrType].curr = 0;
+
+	m_iCurrType = iSquareType;
+
+	tblSquares.rows[m_iCurrType].cells[0].childNodes[0].src = 'hand.gif';
+	tblSquares.rows[m_iCurrType].curr = 1;
+}
+
+var m_iCurrTool = 0;
+
+
+function tool_click(obj) {
+	var oThisRow = obj.parentElement.parentElement;
+
+	var oTbl = oThisRow.parentElement.parentElement;
+
+	oTbl.rows[m_iCurrTool].cells[0].childNodes[0].src = 'blank.gif';
+	oTbl.rows[m_iCurrTool].curr = 0;
+
+	m_iCurrTool = oThisRow.rowIndex;
+
+	oTbl.rows[m_iCurrTool].cells[0].childNodes[0].src = 'hand.gif';
+	oTbl.rows[m_iCurrTool].curr = 1;
+
+	parent.frames[1].window.setCurrTool();
+}
+
+//this is called from the field window
+function setTool(iToolType) {
+	var tblTools = document.getElementById("tblTools");
+
+	tblTools.rows[m_iCurrTool].cells[0].childNodes[0].src = 'blank.gif';
+	tblTools.rows[m_iCurrTool].curr = 0;
+
+	m_iCurrTool = iToolType;
+
+	tblTools.rows[m_iCurrTool].cells[0].childNodes[0].src = 'hand.gif';
+	tblTools.rows[m_iCurrTool].curr = 1;
+
+	parent.frames[1].window.setCurrTool();
+}
+</SCRIPT>
+</HEAD>
+<BODY>
+<table id="tblSquares" cellpadding="0" cellspacing="0" border="0">
+<tr class="ground" curr="1">
+<td><img src="hand.gif"/></td>
+<td><img src="t0.bmp" class="hand" onmouseover="mouse_ovr(this)" onmouseout="mouse_out(this)" onclick="mouse_click(this)" alt="empty square"/></td>
+</tr>
+<tr class="ground" curr="0">
+<td><img src="blank.gif"/></td>
+<td><img src="t1.bmp" class="hand" onmouseover="mouse_ovr(this)" onmouseout="mouse_out(this)" onclick="mouse_click(this)"  alt="plowed, watered square"/></td>
+</tr>
+<tr class="ground" curr="0">
+<td><img src="blank.gif"/></td>
+<td><img src="sd0.bmp" class="hand" onmouseover="mouse_ovr(this)" onmouseout="mouse_out(this)" onclick="mouse_click(this)" alt="seeded square"/></td>
+</tr>
+<tr class="ground" curr="0">
+<td><img src="blank.gif"/></td>
+<td><img src="log.bmp" class="hand" onmouseover="mouse_ovr(this)" onmouseout="mouse_out(this)" onclick="mouse_click(this)" alt="lumber square"/></td>
+</tr>
+<tr class="ground" curr="0">
+<td><img src="blank.gif"/></td>
+<td><img src="log2.bmp" class="hand" onmouseover="mouse_ovr(this)" onmouseout="mouse_out(this)" onclick="mouse_click(this)" alt="branch square"/></td>
+</tr>
+<tr class="ground" curr="0">
+<td><img src="blank.gif"/></td>
+<td><img src="rock.gif" class="hand" onmouseover="mouse_ovr(this)" onmouseout="mouse_out(this)" onclick="mouse_click(this)" alt="stone square"/></td>
+</tr>
+<tr class="ground" curr="0">
+<td><img src="blank.gif"/></td>
+<td><img src="grs2.bmp" class="hand" onmouseover="mouse_ovr(this)" onmouseout="mouse_out(this)" onclick="mouse_click(this)"  alt="grass square"/></td>
+</tr>
+<tr class="ground" curr="0">
+<td><img src="blank.gif"/></td>
+<td><img src="grs.bmp" class="hand" onmouseover="mouse_ovr(this)" onmouseout="mouse_out(this)" onclick="mouse_click(this)"  alt="grass square edge"/></td>
+</tr>
+</table>
+<hr align="left" width="25%"/>
+<!-- Tool Table -->
+<table id="tblTools" cellpadding="0" cellspacing="0" border="0" style="padding-top:2px;">
+<tr class="ground" curr="1">
+<td><img src="hand.gif"/></td>
+<td><img src="t_pen.gif" class="hand" onmouseover="mouse_ovr(this)" onmouseout="mouse_out(this)" onclick="tool_click(this)" alt="pen tool:single square draw:click once to draw 1 square"/></td>
+</tr>
+<tr class="ground" curr="0">
+<td><img src="blank.gif"/></td>
+<td><img src="t_paint.gif" class="hand" onmouseover="mouse_ovr(this)" onmouseout="mouse_out(this)" onclick="tool_click(this)" alt="paint tool:Click once to toggle"/></td>
+</tr>
+<tr class="ground" curr="0">
+<td><img src="blank.gif"/></td>
+<td><img src="t_fill.gif" class="hand" onmouseover="mouse_ovr(this)" onmouseout="mouse_out(this)" onclick="tool_click(this)"  alt="fill field with current square"/></td>
+</tr>
+<tr class="ground" curr="0">
+<td><img src="blank.gif"/></td>
+<td><img src="t_drop.gif" class="hand" onmouseover="mouse_ovr(this)" onmouseout="mouse_out(this)" onclick="tool_click(this)" alt="sample the current square:reverts to previous tool"/></td>
+</tr>
+<tr class="ground" curr="0">
+<td><img src="blank.gif"/></td>
+<td><img src="t_bag.gif" class="hand" onmouseover="mouse_ovr(this)" onmouseout="mouse_out(this)" onclick="tool_click(this)" alt="place a 3x3 bag of seeds"/></td>
+</tr>
+</table>
+</BODY>
+</HTML>
