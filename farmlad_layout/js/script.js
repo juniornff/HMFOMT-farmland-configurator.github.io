@@ -7,8 +7,8 @@ document.addEventListener("DOMContentLoaded", function () {
     const toggleGrid = document.getElementById("toggleGrid");
     const toggleFence = document.getElementById("toggleFence");
 
-    let currentSquare = "t0.bmp";
-    let currentTool = "t_pen.gif";
+    let currentSquare = "assets/t0.bmp";
+    let currentTool = "assets/t_pen.gif";
 
     // Generar el campo de cultivo (27x45)
     for (let row = 0; row < 27; row++) {
@@ -30,8 +30,8 @@ document.addEventListener("DOMContentLoaded", function () {
             currentSquare = option.getAttribute("src");
             imgSquare.src = currentSquare;
 
-            document.querySelectorAll(".square-hand").forEach(hand => hand.src = "blank.gif");
-            option.closest("tr").querySelector(".square-hand").src = "hand.gif";
+            document.querySelectorAll(".square-hand").forEach(hand => hand.src = "assets/blank.gif");
+            option.closest("tr").querySelector(".square-hand").src = "assets/hand.gif";
         });
     });
 
@@ -41,17 +41,17 @@ document.addEventListener("DOMContentLoaded", function () {
             currentTool = tool.getAttribute("src");
             imgTool.src = currentTool;
 
-            document.querySelectorAll(".tool-hand").forEach(hand => hand.src = "blank.gif");
-            tool.closest("tr").querySelector(".tool-hand").src = "hand.gif";
+            document.querySelectorAll(".tool-hand").forEach(hand => hand.src = "assets/blank.gif");
+            tool.closest("tr").querySelector(".tool-hand").src = "assets/hand.gif";
         });
     });
 
     // Manejo de interacciones con el campo
     tblField.addEventListener("click", function (e) {
         if (e.target.tagName === "IMG") {
-            if (currentTool === "t_pen.gif") {
+            if (currentTool === "assets/t_pen.gif") {
                 e.target.src = currentSquare;
-            } else if (currentTool === "t_fill.gif") {
+            } else if (currentTool === "assets/t_fill.gif") {
                 document.querySelectorAll(".field-cell").forEach(img => img.src = currentSquare);
             }
         }
@@ -73,7 +73,7 @@ document.addEventListener("DOMContentLoaded", function () {
         let fieldCells = document.querySelectorAll("#tblField .field-cell");
         fieldCells.forEach((img, index) => {
             if (index < 45 || index >= fieldCells.length - 45 || index % 45 === 0 || index % 45 === 44) {
-                img.src = toggleFence.checked ? "log.bmp" : "t0.bmp";
+                img.src = toggleFence.checked ? "assets/log.bmp" : "assets/t0.bmp";
             }
         });
     });
