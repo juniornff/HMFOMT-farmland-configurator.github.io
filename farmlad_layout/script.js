@@ -60,6 +60,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // Alternar cuadrícula sin afectar tamaño
     toggleGrid.addEventListener("change", function () {
         if (toggleGrid.checked) {
+            tblField.classList.remove("nogrid");
             tblField.classList.add("grid");
         } else {
             tblField.classList.remove("grid");
