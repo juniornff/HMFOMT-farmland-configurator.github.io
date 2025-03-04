@@ -81,7 +81,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // Manejo de interacciones con el campo
     tblField.addEventListener("click", function (e) {
         if (e.target.tagName === "IMG") {
-            if (currentTool === "assets/t_pen.gif" && e.target.classList === "field-cell") {
+            if (currentTool === "assets/t_pen.gif" && e.target.classList.contains("field-cell")) {
                 e.target.src = currentSquare;
             } else if (currentTool === "assets/t_fill.gif") {
                 document.querySelectorAll(".field-cell").forEach(img => img.src = currentSquare);
