@@ -80,14 +80,70 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Manejo de interacciones con el campo
     tblField.addEventListener("click", function (e) {
-        if (e.target.tagName === "IMG") {
-            if (currentTool === "assets/t_pen.gif" && e.target.classList.contains("field-cell")) {
+        if (e.target.tagName === "IMG" && e.target.classList.contains("field-cell")) {
+            // Herramienta Pluma
+            if (currentTool === "assets/t_pen.gif") {
                 e.target.src = currentSquare;
-            } else if (currentTool === "assets/t_fill.gif") {
-                document.querySelectorAll(".field-cell").forEach(img => img.src = currentSquare);
+            }
+            //Herramienta Pintar
+            if (currentTool === "assets/t_paint.gif") {
+                // TODO
+            }
+            // Herramienta Rellenar
+            if (currentTool === "assets/t_fill.gif") {
+                // document.querySelectorAll(".field-cell").forEach(img => img.src = currentSquare);
+                floodFill(e.target);
+            }
+            //Herramienta Muestra
+            if (currentTool === "assets/t_drop.gif") {
+                // TODO
+            }
+            //Herramienta Bolsa
+            if (currentTool === "assets/t_bag.gif") {
+                // TODO
             }
         }
     });
+
+    function floodFill(startCell) {
+        let targetSrc = startCell.src;  // Tipo de cuadro original
+        if (!startCell.classList.contains("field-cell")) return;  // Solo afectar "field-cell"
+    
+        let queue = [startCell];
+        let visited = new Set(); // Para evitar visitar la misma celda más de una vez
+    
+        while (queue.length > 0) {
+            let cell = queue.shift();
+            if (!cell || visited.has(cell) || !cell.classList.contains("field-cell") || cell.src !== targetSrc) {
+                continue;
+            }
+    
+            // Marcar como visitada
+            visited.add(cell);
+            cell.src = currentSquare; // Cambiar la imagen
+    
+            // Obtener posición en la tabla
+            let td = cell.parentElement;
+            let tr = td.parentElement;
+            let rowIdx = [...tr.parentElement.children].indexOf(tr);
+            let colIdx = [...tr.children].indexOf(td);
+    
+            // Buscar vecinos (arriba, abajo, izquierda, derecha)
+            let neighbors = [
+                tblField.rows[rowIdx - 1]?.cells[colIdx]?.firstChild,  // Arriba
+                tblField.rows[rowIdx + 1]?.cells[colIdx]?.firstChild,  // Abajo
+                tblField.rows[rowIdx]?.cells[colIdx - 1]?.firstChild,  // Izquierda
+                tblField.rows[rowIdx]?.cells[colIdx + 1]?.firstChild   // Derecha
+            ];
+    
+            // Agregar vecinos a la cola si no han sido visitados
+            neighbors.forEach(neighbor => {
+                if (neighbor && !visited.has(neighbor) && neighbor.classList.contains("field-cell") && neighbor.src === targetSrc) {
+                    queue.push(neighbor);
+                }
+            });
+        }
+    }
 
     // Alternar cuadrícula sin afectar tamaño
     toggleGrid.addEventListener("change", function () {
