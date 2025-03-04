@@ -104,7 +104,7 @@ document.addEventListener("DOMContentLoaded", function () {
     toggleFence.addEventListener("change", function () {
         let fieldCells = document.querySelectorAll("#tblField .field-cell");
         fieldCells.forEach((img, index) => {
-            if (index < 45 || index >= fieldCells.length - 45 || index % 45 === 0 || index % 45 === 44) {
+            if (index < 43 || index >= fieldCells.length - 43 || index % 43 === 0 || index % 43 === 42) {
                 img.src = toggleFence.checked ? "assets/log.bmp" : "assets/t0.bmp";
             }
         });
