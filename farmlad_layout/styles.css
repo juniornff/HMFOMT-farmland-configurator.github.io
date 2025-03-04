@@ -14,8 +14,13 @@ body {
     overflow: hidden;
 }
 
-#menu, #field {
-    width: 45%;
+#menu {
+    width: 15%;
+    overflow: auto;
+}
+
+#field {
+    width: 85%;
     overflow: auto;
 }
 
