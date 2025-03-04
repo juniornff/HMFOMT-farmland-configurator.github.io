@@ -91,20 +91,20 @@ document.addEventListener("DOMContentLoaded", function () {
             }
             // Herramienta Rellenar
             if (currentTool === "assets/t_fill.gif") {
-                // document.querySelectorAll(".field-cell").forEach(img => img.src = currentSquare);
                 floodFill(e.target);
             }
             //Herramienta Muestra
             if (currentTool === "assets/t_drop.gif") {
-                // TODO
+                selectSquareFromField(e.target);
             }
             //Herramienta Bolsa
             if (currentTool === "assets/t_bag.gif") {
-                // TODO
+                applyBag(e.target);
             }
         }
     });
 
+    // Funcion para Rellenar las casillas del field
     function floodFill(startCell) {
         let targetSrc = startCell.src;  // Tipo de cuadro original
         if (!startCell.classList.contains("field-cell")) return;  // Solo afectar "field-cell"
@@ -142,6 +142,47 @@ document.addEventListener("DOMContentLoaded", function () {
                     queue.push(neighbor);
                 }
             });
+        }
+    }
+
+    // Función para seleccionar un cuadro desde el campo
+    function selectSquareFromField(selectedCell) {
+        // Obtener la imagen del cuadro seleccionado
+        let newSquare = selectedCell.src;
+        
+        // Actualizar el cuadro actual y la imagen de previsualización
+        currentSquare = newSquare;
+	    let newSquareFile = newSquare.split("/").pop();
+	    currentSquare = "assets/" + newSquareFile;  
+	    imgSquare.src = currentSquare;
+
+        // Buscar la opción en el menú que coincide con la imagen seleccionada
+        let selectedOption = [...tblSquares].find(option => option.getAttribute("src").endsWith(newSquareFile));
+        
+        // Si la opción existe en el menú, mover la mano (`hand.gif`) a esa opción
+        if (selectedOption) {
+            document.querySelectorAll(".square-hand").forEach(hand => hand.src = "assets/blank.gif");
+            selectedOption.closest("tr").querySelector(".square-hand").src = "assets/hand.gif";
+        }
+    }
+
+    // Herramienta Bolsa de Semillas (3x3)
+    function applyBag(centerCell) {
+        let td = centerCell.parentElement;
+        let tr = td.parentElement;
+        let centerRow = [...tr.parentElement.children].indexOf(tr);
+        let centerCol = [...tr.children].indexOf(td);
+
+        for (let i = -1; i <= 1; i++) {
+            for (let j = -1; j <= 1; j++) {
+                let newRow = centerRow + i;
+                let newCol = centerCol + j;
+
+                let cell = tblField.rows[newRow]?.cells[newCol]?.firstChild;
+                if (cell && cell.classList.contains("field-cell")) {
+                    cell.src = currentSquare;
+                }
+            }
         }
     }
 
