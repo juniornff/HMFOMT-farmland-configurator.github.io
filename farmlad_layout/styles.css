@@ -14,12 +14,12 @@ body {
 }
 
 #menu {
-    width: 15%;
+    width: 20%;
     overflow: auto;
 }
 
 #field {
-    width: 85%;
+    width: 80%;
     overflow: auto;
 }
 
