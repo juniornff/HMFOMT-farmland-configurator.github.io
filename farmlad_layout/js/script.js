@@ -20,7 +20,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 if (col === 0){
                     img.src = "assets/side_tl.bmp";
                     img.classList.add("side");
-                } else if (col === 26){
+                } else if (col === 44){
                     img.src = "assets/side_tr.bmp";
                     img.classList.add("side");
                 } else {
@@ -31,7 +31,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 if (col === 0){
                     img.src = "assets/side_bl.bmp";
                     img.classList.add("side");
-                } else if (col === 26){
+                } else if (col === 44){
                     img.src = "assets/side_br.bmp";
                     img.classList.add("side");
                 } else {
@@ -42,7 +42,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 if (col === 0){
                     img.src = "assets/side_l.bmp";
                     img.classList.add("side");
-                } else if (col === 26){
+                } else if (col === 44){
                     img.src = "assets/side_r.bmp";
                     img.classList.add("side");
                 } else {
@@ -81,7 +81,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // Manejo de interacciones con el campo
     tblField.addEventListener("click", function (e) {
         if (e.target.tagName === "IMG") {
-            if (currentTool === "assets/t_pen.gif") {
+            if (currentTool === "assets/t_pen.gif" && e.target.classList === "field-cell") {
                 e.target.src = currentSquare;
             } else if (currentTool === "assets/t_fill.gif") {
                 document.querySelectorAll(".field-cell").forEach(img => img.src = currentSquare);
