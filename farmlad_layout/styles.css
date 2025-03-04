@@ -1,0 +1,64 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 10px;
+    height: 100vh;
+    overflow: hidden;
+}
+
+#menu, #field {
+    width: 45%;
+    overflow: auto;
+}
+
+table {
+    border-collapse: collapse;
+    margin-bottom: 10px;
+    width: 90%;
+}
+
+td {
+    padding: 2px;
+    border: 1px solid black;
+}
+
+.hand {
+    cursor: pointer;
+}
+
+.hand-icon {
+    width: 16px;
+    height: 16px;
+}
+
+.grid td {
+    border: solid 1px black;
+}
+
+.grid td.hilite {
+    border: solid 1px red;
+}
+
+.nogrid td {
+    border: solid 1px transparent;
+}
+
+#tblField td {
+    width: 16px;
+    height: 16px;
+    padding: 0;
+}
+
+#tblField img {
+    width: 16px;
+    height: 16px;
+    display: block;
+}
