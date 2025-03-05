@@ -7,41 +7,50 @@
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-
-    <!-- Contenedor del Menú -->
-    <div id="menu">
-        <h2>Selecciona un Tipo de Cuadro</h2>
-        <table id="tblSquares">
-            <tr curr="1"><td><img class="hand-icon square-hand" src="assets/hand.gif"/></td><td><img src="assets/t0.bmp" class="hand option" data-type="0" alt="Cuadro vacío"/></td></tr>
-            <tr curr="0"><td><img class="hand-icon square-hand" src="assets/blank.gif"/></td><td><img src="assets/t1.bmp" class="hand option" data-type="1" alt="Cuadro arado"/></td></tr>
-            <tr curr="0"><td><img class="hand-icon square-hand" src="assets/blank.gif"/></td><td><img src="assets/sd0.bmp" class="hand option" data-type="2" alt="Cuadro sembrado"/></td></tr>
-            <tr curr="0"><td><img class="hand-icon square-hand" src="assets/blank.gif"/></td><td><img src="assets/log.bmp" class="hand option" data-type="3" alt="tablon madera"/></td></tr>
-            <tr curr="0"><td><img class="hand-icon square-hand" src="assets/blank.gif"/></td><td><img src="assets/log2.bmp" class="hand option" data-type="4" alt="Madera"/></td></tr>
-            <tr curr="0"><td><img class="hand-icon square-hand" src="assets/blank.gif"/></td><td><img src="assets/rock.gif" class="hand option" data-type="5" alt="Piedra"/></td></tr>
-            <tr curr="0"><td><img class="hand-icon square-hand" src="assets/blank.gif"/></td><td><img src="assets/grs2.bmp" class="hand option" data-type="6" alt="Hierba"/></td></tr>
-            <tr curr="0"><td><img class="hand-icon square-hand" src="assets/blank.gif"/></td><td><img src="assets/grs.bmp" class="hand option" data-type="7" alt="Borde Hierba"/></td></tr>
-        </table>
-
-        <h2>Selecciona una Herramienta</h2>
-        <table id="tblTools">
-            <tr curr="1"><td><img class="hand-icon tool-hand" src="assets/hand.gif"/></td><td><img src="assets/t_pen.gif" class="hand tool" data-tool="0" alt="Pluma"/></td></tr>
-            <tr curr="0"><td><img class="hand-icon tool-hand" src="assets/blank.gif"/></td><td><img src="assets/t_paint.gif" class="hand tool" data-tool="1" alt="Pintar"/></td></tr>
-            <tr curr="0"><td><img class="hand-icon tool-hand" src="assets/blank.gif"/></td><td><img src="assets/t_fill.gif" class="hand tool" data-tool="2" alt="Rellenar"/></td></tr>
-            <tr curr="0"><td><img class="hand-icon tool-hand" src="assets/blank.gif"/></td><td><img src="assets/t_drop.gif" class="hand tool" data-tool="3" alt="Muestra"/></td></tr>
-            <tr curr="0"><td><img class="hand-icon tool-hand" src="assets/blank.gif"/></td><td><img src="assets/t_bag.gif" class="hand tool" data-tool="4" alt="Bolsa de semillas"/></td></tr>
-        </table>
+    <!-- Contenedor para el Título -->
+    <div id="header">
+        <h1>Harvest Moon: FOMT - Farmland Configurator</h1>
     </div>
 
-    <!-- Contenedor del Campo -->
-    <div id="field">
-        <h2>Campo de Cultivo</h2>
-        <table id="tblField" class="grid"></table>
+    <!-- Contenedor para el contenido -->
+    <div id="main-container">
 
-        <label><input type="checkbox" id="toggleGrid" checked> Mostrar Cuadrícula</label>
-        <label><input type="checkbox" id="toggleFence"> Mostrar Valla</label>
+        <!-- Contenedor del Menú -->
+        <div id="menu">
+            <h2>Sprites</h2>
+            <table id="tblSquares">
+                <tr curr="1"><td><img class="hand-icon square-hand" src="assets/hand.gif"/></td><td><img src="assets/t0.bmp" class="hand option" data-type="0" alt="Cuadro vacío"/></td></tr>
+                <tr curr="0"><td><img class="hand-icon square-hand" src="assets/blank.gif"/></td><td><img src="assets/t1.bmp" class="hand option" data-type="1" alt="Cuadro arado"/></td></tr>
+                <tr curr="0"><td><img class="hand-icon square-hand" src="assets/blank.gif"/></td><td><img src="assets/sd0.bmp" class="hand option" data-type="2" alt="Cuadro sembrado"/></td></tr>
+                <tr curr="0"><td><img class="hand-icon square-hand" src="assets/blank.gif"/></td><td><img src="assets/log.bmp" class="hand option" data-type="3" alt="tablon madera"/></td></tr>
+                <tr curr="0"><td><img class="hand-icon square-hand" src="assets/blank.gif"/></td><td><img src="assets/log2.bmp" class="hand option" data-type="4" alt="Madera"/></td></tr>
+                <tr curr="0"><td><img class="hand-icon square-hand" src="assets/blank.gif"/></td><td><img src="assets/rock.gif" class="hand option" data-type="5" alt="Piedra"/></td></tr>
+                <tr curr="0"><td><img class="hand-icon square-hand" src="assets/blank.gif"/></td><td><img src="assets/grs2.bmp" class="hand option" data-type="6" alt="Hierba"/></td></tr>
+                <tr curr="0"><td><img class="hand-icon square-hand" src="assets/blank.gif"/></td><td><img src="assets/grs.bmp" class="hand option" data-type="7" alt="Borde Hierba"/></td></tr>
+            </table>
 
-        <p>Cuadro Actual: <img id="imgSquare" src="assets/t0.bmp"></p>
-        <p>Herramienta Actual: <img id="imgTool" src="assets/t_pen.gif"></p>
+            <h2>Tools</h2>
+            <table id="tblTools">
+                <tr class="ground" curr="1"><td><img class="hand-icon tool-hand" src="assets/hand.gif"/></td><td><img src="assets/t_pen.gif" class="hand tool" data-tool="0" alt="Pluma"/></td></tr>
+                <tr class="ground" curr="0"><td><img class="hand-icon tool-hand" src="assets/blank.gif"/></td><td><img src="assets/t_paint.gif" class="hand tool" data-tool="1" alt="Pintar"/></td></tr>
+                <tr class="ground" curr="0"><td><img class="hand-icon tool-hand" src="assets/blank.gif"/></td><td><img src="assets/t_fill.gif" class="hand tool" data-tool="2" alt="Rellenar"/></td></tr>
+                <tr class="ground" curr="0"><td><img class="hand-icon tool-hand" src="assets/blank.gif"/></td><td><img src="assets/t_drop.gif" class="hand tool" data-tool="3" alt="Muestra"/></td></tr>
+                <tr class="ground" curr="0"><td><img class="hand-icon tool-hand" src="assets/blank.gif"/></td><td><img src="assets/t_bag.gif" class="hand tool" data-tool="4" alt="Bolsa de semillas"/></td></tr>
+            </table>
+        </div>
+
+        <!-- Contenedor del Campo -->
+        <div id="field">
+            <h2>Field</h2>
+            <table id="tblField" class="grid"></table>
+
+            <label><input type="checkbox" id="toggleGrid" checked> Mostrar Cuadrícula</label>
+            <label><input type="checkbox" id="toggleFence"> Mostrar Valla</label>
+
+            <p>Cuadro Actual: <img id="imgSquare" src="assets/t0.bmp"></p>
+            <p>Herramienta Actual: <img id="imgTool" src="assets/t_pen.gif"></p>
+        </div>
+        
     </div>
 
     <script src="js/script.js"></script>

@@ -7,15 +7,32 @@
 body {
     font-family: Arial, sans-serif;
     display: flex;
-    align-items: flex-start;
+    flex-direction: column;
+    align-items: center;
     padding: 10px;
     height: 100vh;
     overflow: hidden;
 }
 
+#header {
+    text-align: center;
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+#main-container {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+}
+
 #menu {
     width: 20%;
     overflow: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 #field {
@@ -27,6 +44,14 @@ table {
     border-collapse: collapse;
     margin-bottom: 10px;
     width: auto;
+}
+
+#tblSquares, #tblTools {
+    background-image: url("../assets/t0.bmp");
+    background-repeat: repeat;
+    background-size: auto;
+    background-position: center;
+    margin: 10px auto; /* Asegura centrado horizontal */
 }
 
 td {
