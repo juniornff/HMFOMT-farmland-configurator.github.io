@@ -10,4 +10,7 @@ All credit to the creators
 
 * Fix hand dublication of the options menu hand indicator
 * Fix the fill tool
+* Change the fill tool to take into account the difference between the different squares
 * Change the bag tool so it can be use for more options (before it only place seeds in a 3x3 square if the land was already plowed)
+* Remake the paint tool
+* Make images unselectable/non-dragable

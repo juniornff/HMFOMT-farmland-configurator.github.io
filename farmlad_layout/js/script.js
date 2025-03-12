@@ -87,7 +87,7 @@ document.addEventListener("DOMContentLoaded", function () {
             }
             //Herramienta Pintar
             if (currentTool === "assets/t_paint.gif") {
-                // TODO
+                enablePainting();
             }
             // Herramienta Rellenar
             if (currentTool === "assets/t_fill.gif") {
@@ -103,6 +103,28 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         }
     });
+
+    // Funcion pintar con el movimiento del mouse
+    function enablePainting() {
+        let isPainting = false;
+
+        tblField.addEventListener("mousedown", function (e) {
+            if (currentTool === "assets/t_paint.gif" && e.target.tagName === "IMG" && e.target.classList.contains("field-cell")) {
+                isPainting = true;
+                e.target.src = currentSquare; // Pinta la primera casilla
+            }
+        });
+
+        tblField.addEventListener("mousemove", function (e) {
+            if (isPainting && currentTool === "assets/t_paint.gif" && e.target.tagName === "IMG" && e.target.classList.contains("field-cell")) {
+                e.target.src = currentSquare; // Pinta mientras se mueve el mouse
+            }
+        });
+
+        document.addEventListener("mouseup", function () {
+            isPainting = false; // Detiene la pintura cuando se suelta el mouse
+        });
+    }
 
     // Funcion para Rellenar las casillas del field
     function floodFill(startCell) {

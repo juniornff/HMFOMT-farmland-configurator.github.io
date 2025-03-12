@@ -91,3 +91,9 @@ td {
     height: 16px;
     display: block;
 }
+
+img {
+    user-select: none; /* Evita la selección del texto e imágenes */
+    -webkit-user-drag: none; /* Deshabilita el arrastre en navegadores WebKit */
+    pointer-events: auto; /* Asegura que las imágenes sigan recibiendo eventos */
+}
